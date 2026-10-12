@@ -59,7 +59,7 @@ To keep it installed but go back to Claude Code's own drawing, run `/skin off`.
 | `/skin <name>` | Switch skin: `noir`, `tokyo-night`, `dracula`, `catppuccin`, `rose-pine`, `nord`, `gruvbox`, `kanagawa`, `everforest`, `one-dark`, `solarized`, `night-owl`, `ayu`, `github`, `mono` |
 | `/skin list` | Every skin, yours included |
 | `/skin off` | Back to Claude Code's own drawing |
-| `/skin rail\|shimmer\|band\|countdown\|clip\|markdown\|quiet\|charts\|math\|commands\|shell\|highlight\|hints\|links\|copy\|fold on\|off` | Toggle one part |
+| `/skin rail\|shimmer\|band\|countdown\|resetat\|clip\|markdown\|quiet\|charts\|math\|commands\|shell\|highlight\|hints\|links\|copy\|fold on\|off` | Toggle one part |
 | `/skin calm` · `calm off` | No motion, one line per tool row, read-only output folded, failures always whole. `calm off` puts back what you had |
 | `/skin copy` · `copy code` | Copy Claude's last reply, or just its last code block |
 | `/skin tables on\|text\|off` | `text` draws tables and code as selectable text on the desktop |

@@ -11,7 +11,7 @@ import { fitText, settled } from '../hooks/svg-kit'
 import { diffLines, diffSvg, hunksOf } from '../hooks/svg-diff'
 import { fitColumns, kindOfCell, measure, tableSvg, wrapCell } from '../hooks/svg-table'
 import { outputLines, shellOutputOf, terminalSvg } from '../hooks/svg-terminal'
-import { countdownOf, countdownsOf, limitLabel, meterColor, metersKey, metersOf, usageSvg } from '../hooks/svg-usage'
+import { countdownOf, countdownsOf, limitLabel, meterColor, metersKey, metersOf, resetAtOf, resetTimesOf, usageSvg } from '../hooks/svg-usage'
 import { isNewer, updateNotice } from '../hooks/updates'
 import { deepen, gnomeDark, isLightTheme, macDark, resolveLight, toLight, windowsDark } from '../hooks/light'
 import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/folders'
@@ -299,6 +299,17 @@ test('plan limits read as 5h and 7d, and a meter warns as it fills', async () =>
   ])
   expect(meterColor(85, tokyoNight.palette)).toBe(tokyoNight.palette.warn)
   expect(usageSvg([{ label: 'context', percent: 42 }], tokyoNight.palette).alt).toBe('context 42%')
+})
+
+test('a reset time reads in the viewer clock, with the day only when it is not today', () => {
+  const at = (iso: string, now: string) => resetAtOf(Date.parse(iso), Date.parse(now), 'en-US', 'UTC')
+
+  expect(at('2026-10-12T04:40:00Z', '2026-10-12T01:00:00Z'), 'today: the time alone').toBe('4:40 AM')
+  expect(at('2026-10-14T15:10:00Z', '2026-10-12T01:00:00Z'), 'a later day: weekday and date').toBe('Wed, Oct 14, 3:10 PM')
+  expect(at('2026-10-19T15:10:00Z', '2026-10-12T01:00:00Z'), 'a week out: the same, so the 7d ring always names its day').toBe('Mon, Oct 19, 3:10 PM')
+  expect(at('2026-10-13T00:05:00Z', '2026-10-12T23:50:00Z'), 'past midnight counts as tomorrow').toBe('Tue, Oct 13, 12:05 AM')
+  expect(resetTimesOf({ context: 10, limits: [{ label: '5h', percent: 1, resetsAt: 1 }, { label: '7d', percent: 2 }] }, 0)).toHaveProperty('5h')
+  expect(resetTimesOf({ context: 10, limits: [{ label: '7d', percent: 2 }] }, 0)).toEqual({})
 })
 
 test('a countdown reads to the minute, rounding up, and only for the limits that reset', async () => {

@@ -25,7 +25,7 @@ import { ICONS } from './skin'
 import type { Skin } from './skin'
 import { hunksOf } from './svg-diff'
 import { shellOutputOf } from './svg-terminal'
-import { countdownsOf, limitLabel, metersOf } from './svg-usage'
+import { countdownsOf, limitLabel, metersOf, resetTimesOf } from './svg-usage'
 import { shortenPath } from './format'
 import { kindOf, summarize, toolLabel } from './tools'
 import { commandOf, errorLine, isQuiet, quietLabel } from './quiet'
@@ -552,7 +552,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'skin',
       description: 'Open the skin settings, or /skin <name | list | off>',
-      argumentHint: '[gallery | copy | copy code | name | list | off | calm | pin | unpin | share | rail | tables | shimmer | band | countdown | clip | markdown | quiet | charts | math | commands | shell | highlight | hints | links | fold | icons | prompt]',
+      argumentHint: '[gallery | copy | copy code | name | list | off | calm | pin | unpin | share | rail | tables | shimmer | band | countdown | resetat | clip | markdown | quiet | charts | math | commands | shell | highlight | hints | links | fold | icons | prompt]',
       immediate: true,
     })
     await $.tool.register({
@@ -1116,7 +1116,8 @@ reply width: ${lastColumns} columns`
     // Drawn from the clock so a countdown switched on shows at once; reading the atom
     // redraws the band when the minute tick changes one.
     const countdowns = active?.prefs.countdown === true ? (await read($, countdownsAtom), countdownsOf(usage, await $.clock.now())) : {}
-    const meters = metersOf(usage, countdowns)
+    const times = active?.prefs.resetAt === true ? resetTimesOf(usage, await $.clock.now()) : {}
+    const meters = metersOf(usage, countdowns, times)
 
     if (active === null || !active.prefs.band || e.props.hasSurvey || meters.length === 0) {
       return next(e)

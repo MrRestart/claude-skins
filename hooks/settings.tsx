@@ -113,6 +113,7 @@ export function settingsPane(look: Look, ui: PaneUi, model: SettingsModel, actio
         {toggle('shimmer', 's', prefs.shimmer)}
         {toggle('band', 'b', prefs.band)}
         {toggle('countdown', 'w', prefs.countdown)}
+        {toggle('resetat', 'd', prefs.resetAt)}
         {toggle('clip', 'c', prefs.clipOutput)}
         {toggle('markdown', 'm', prefs.markdown)}
         {toggle('quiet', 'q', prefs.quiet)}

@@ -11,8 +11,9 @@ const ITEM_W = 132
 const TEXT_SIZE = 12.5
 const MINUTE_MS = 60_000
 
-// `resets`, where shown, is the time left until the limit resets, as `countdownOf` writes it.
-export type Meter = { label: string; percent: number; resets?: string }
+// `resets`, where shown, is the time left until the limit resets, as `countdownOf` writes it;
+// `at` is the clock time it resets, as `resetAtOf` writes it.
+export type Meter = { label: string; percent: number; resets?: string; at?: string }
 
 // The time left until a reset, to the minute: `3d4h`, `1h05`, `12m`, and `now` once it is due.
 export function countdownOf(ms: number): string {
@@ -37,11 +38,30 @@ export function countdownOf(ms: number): string {
 export const countdownsOf = (usage: UsageSnap, now: number): Record<string, string> =>
   Object.fromEntries(usage.limits.flatMap(limit => (limit.resetsAt === undefined ? [] : [[limit.label, countdownOf(limit.resetsAt - now)]])))
 
+// When a reset falls, in the viewer's own time: `4:40 AM` today, and from tomorrow the weekday and
+// date as well, `Wed, Oct 14, 3:10 PM`. `locale` and `timeZone` default to the machine's.
+export function resetAtOf(at: number, now: number, locale?: string, timeZone?: string): string {
+  const zone = timeZone === undefined ? {} : { timeZone }
+  const day = (ms: number) => new Date(ms).toLocaleDateString('en-CA', zone)
+  const time = new Date(at).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', ...zone })
+
+  if (day(at) <= day(now)) {
+    return time
+  }
+
+  return `${new Date(at).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', ...zone })}, ${time}`
+}
+
+// Each limit's reset time by its label, for the limits that say when they reset.
+export const resetTimesOf = (usage: UsageSnap, now: number): Record<string, string> =>
+  Object.fromEntries(usage.limits.flatMap(limit => (limit.resetsAt === undefined ? [] : [[limit.label, resetAtOf(limit.resetsAt, now)]])))
+
 // What the band's entrance is keyed by: the numbers, not the countdowns, so a countdown
 // ticking down redraws the rings settled instead of filling them again.
 export const metersKey = (meters: readonly Meter[]): string => meters.map(meter => `${meter.label} ${meter.percent}%`).join(', ')
 
-const meterText = (meter: Meter): string => `${meter.percent}% ${meter.label}${meter.resets === undefined ? '' : ` · ${meter.resets}`}`
+const meterText = (meter: Meter): string =>
+  `${meter.percent}% ${meter.label}${meter.resets === undefined ? '' : ` · ${meter.resets}`}${meter.at === undefined ? '' : ` · ${meter.at}`}`
 
 // `five_hour` reads as `5h`, `seven_day` as `7d`; any other kind as its own name.
 export function limitLabel(kind: string): string {
@@ -58,14 +78,16 @@ export function limitLabel(kind: string): string {
   return name.replace(/_/g, ' ')
 }
 
-// `countdowns`, by limit label, puts each limit's time to reset beside its meter.
-export function metersOf(usage: UsageSnap, countdowns: Record<string, string> = {}): Meter[] {
+// `countdowns` and `times`, by limit label, put each limit's time to reset and the clock time
+// it resets at beside its meter.
+export function metersOf(usage: UsageSnap, countdowns: Record<string, string> = {}, times: Record<string, string> = {}): Meter[] {
   return [
     ...(usage.context === null ? [] : [{ label: 'context', percent: usage.context }]),
     ...usage.limits.map(limit => {
       const resets = countdowns[limit.label]
+      const at = times[limit.label]
 
-      return { label: limit.label, percent: limit.percent, ...(resets === undefined ? {} : { resets }) }
+      return { label: limit.label, percent: limit.percent, ...(resets === undefined ? {} : { resets }), ...(at === undefined ? {} : { at }) }
     }),
   ].map(meter => ({ ...meter, percent: Math.max(0, Math.min(100, Math.round(meter.percent))) }))
 }
@@ -91,7 +113,7 @@ export function usageSvg(meters: readonly Meter[], palette: Palette): { source: 
       return [
         `<circle cx="${x}" cy="15" r="${RING_R}" fill="none" stroke="${palette.muted}" stroke-opacity=".25" stroke-width="3"/>`,
         `<circle class="fill" cx="${x}" cy="15" r="${RING_R}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${filled} ${circumference}" transform="rotate(-90 ${x} 15)" style="--len:${filled}"/>`,
-        `<text x="${x + RING_R + 8}" y="19.5" font-size="${TEXT_SIZE}"><tspan style="fill:${palette.fg};font-weight:600">${meter.percent}%</tspan><tspan style="fill:${palette.muted}"> ${escape(meter.label)}${meter.resets === undefined ? '' : ` · ${escape(meter.resets)}`}</tspan></text>`,
+        `<text x="${x + RING_R + 8}" y="19.5" font-size="${TEXT_SIZE}"><tspan style="fill:${palette.fg};font-weight:600">${meter.percent}%</tspan><tspan style="fill:${palette.muted}"> ${escape(meter.label)}${meter.resets === undefined ? '' : ` · ${escape(meter.resets)}`}</tspan>${meter.at === undefined ? '' : `<tspan style="fill:${palette.web}"> · ${escape(meter.at)}</tspan>`}</text>`,
       ].join('')
     })
     .join('')
@@ -107,7 +129,7 @@ export function usageSvg(meters: readonly Meter[], palette: Palette): { source: 
     source: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><style>${style}</style>${items}</svg>`,
     width,
     height,
-    alt: meters.map(meter => `${meter.label} ${meter.percent}%${meter.resets === undefined ? '' : `, resets in ${meter.resets}`}`).join(', '),
+    alt: meters.map(meter => `${meter.label} ${meter.percent}%${meter.resets === undefined ? '' : `, resets in ${meter.resets}`}${meter.at === undefined ? '' : `, resets at ${meter.at}`}`).join(', '),
     entranceMs: FILL_MS,
   }
 }

@@ -30,6 +30,8 @@ export type Prefs = {
   band: boolean
   // When each plan limit resets, beside its meter in the band.
   countdown: boolean
+  // The clock time each plan limit resets at, beside its meter in the band.
+  resetAt: boolean
   clipOutput: boolean
   markdown: boolean
   quiet: boolean

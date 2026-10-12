@@ -3,6 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine, Plugin } from 'claude-code/testing'
 
 import { widthOf } from '../hooks/markdown'
+import { resetAtOf } from '../hooks/svg-usage'
 import noir from '../hooks/themes/noir'
 
 const SURFACES = ['terminal', 'desktop'] as const
@@ -1236,6 +1237,32 @@ test('with countdown on, the band says when each limit resets, on both surfaces'
 
   const line = await $.ui.mount(BAND('terminal', false))
   expect(await line.find({ type: 'Text', text: ' 18% 5h · 1h40' })).toBeDefined()
+})
+
+test('with resetat on, the band says when each limit resets, in the skin colour, on both surfaces', async ($, on) => {
+  on('session.usage', () => ({ value: resetting }))
+  stubEngine(on, { usage: true })
+  await startDesktop($, on)
+
+  const desktop = await $.ui.mount(BAND('desktop', false))
+  const before = await svgSource(desktop)
+  await desktop.unmount()
+  expect(before, 'off by default').not.toContain('resets at')
+
+  await runSkin($, 'resetat on')
+  const band = await $.ui.mount(BAND('desktop', false))
+  const source = await svgSource(band)
+  const at = resetAtOf(10_000 + 100 * 60_000, 10_000)
+  expect(source).toContain(`> · ${at}</tspan>`)
+  expect(source, 'drawn in a skin colour, apart from the muted label').toContain(`<tspan style="fill:${noir.palette.web}"> · ${at}</tspan>`)
+  expect(((await band.find({ type: 'Svg' })) as { props: { alt: string } } | undefined)?.props.alt).toContain(`5h 18%, resets at ${at}`)
+
+  const line = await $.ui.mount(BAND('terminal', false))
+  expect(await line.find({ type: 'Text', text: ` 18% 5h · ${at}` })).toBeDefined()
+
+  await band.unmount()
+  await runSkin($, 'countdown on')
+  expect(await svgSource(await $.ui.mount(BAND('desktop', false))), 'it sits beside the countdown').toContain(`5h · 1h40`)
 })
 
 test('a countdown ticking down redraws the band without filling its rings again', async ($, on) => {
